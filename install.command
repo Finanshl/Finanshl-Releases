@@ -78,11 +78,11 @@ then
 fi
 
 echo "Installing Finanshl into /Applications..."
-sudo rm -rf "/Applications/${APP_NAME}.app"
-sudo ditto "$APP_SOURCE" "/Applications/${APP_NAME}.app"
+rm -rf "/Applications/${APP_NAME}.app"
+ditto "$APP_SOURCE" "/Applications/${APP_NAME}.app"
 
 echo "Clearing macOS quarantine attributes..."
-sudo xattr -c "/Applications/${APP_NAME}.app"
+xattr -c "/Applications/${APP_NAME}.app"
 
 echo "Starting Finanshl..."
 open "/Applications/${APP_NAME}.app"
