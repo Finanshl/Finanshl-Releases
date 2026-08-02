@@ -37,20 +37,42 @@ esac
 
 echo "Finding the latest Finanshl release for ${ARCH}..."
 
-ASSET_URL="$(
-    curl --fail --silent --show-error --location \
-        --header "Accept: application/vnd.github+json" \
+ASSET_URL=""
+
+RELEASE_JSON="$(curl --fail --silent --show-error --location \
+    --retry 3 --retry-delay 2 \
+    --header "Accept: application/vnd.github+json" \
+    --header "User-Agent: Finanshl-installer" \
+    "$RELEASES_API" 2>/dev/null || true)"
+
+if [ -n "$RELEASE_JSON" ]
+then
+    ASSET_URL="$(printf '%s' "$RELEASE_JSON" |
+        grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*"' |
+        sed 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"//; s/"$//' |
+        grep -- "-${ARCH}\\.dmg$" |
+        sed -n '1p' || true)"
+fi
+
+# Fall back to the releases page when api.github.com is unavailable.
+if [ -z "$ASSET_URL" ]
+then
+    RELEASE_PAGE="$(curl --fail --silent --show-error --location \
+        --retry 3 --retry-delay 2 \
         --header "User-Agent: Finanshl-installer" \
-        "$RELEASES_API" |
-    grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*"' |
-    sed 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"//; s/"$//' |
-    grep -- "-${ARCH}\\.dmg$" |
-    sed -n '1p' || true
-)"
+        "https://github.com/${OWNER}/${REPOSITORY}/releases/latest" 2>/dev/null || true)"
+
+    ASSET_URL="$(printf '%s' "$RELEASE_PAGE" |
+        grep -oE 'href="[^"]*Finanshl-[^"]*-[^/]*-${ARCH}\\.dmg"' |
+        sed 's/^href="//; s/"$//' |
+        sed 's#^/#https://github.com/#' |
+        sed -n '1p' || true)"
+fi
 
 if [ -z "$ASSET_URL" ]
 then
-    echo "Could not find a Finanshl DMG for architecture: ${ARCH}"
+    echo "Could not connect to GitHub or find a Finanshl DMG for architecture: ${ARCH}"
+    echo "Please check your internet connection and try again."
     exit 1
 fi
 
